@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "WorkSpaceRN",
+    "slug": "workspacern",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#1A4D8F"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1A4D8F"
+      }
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
+  }
+}
