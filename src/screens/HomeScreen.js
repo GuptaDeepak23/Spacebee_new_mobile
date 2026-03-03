@@ -15,6 +15,7 @@ import BranchModal from '../components/home/BranchModal';
 import ParticipantsModal from '../components/home/ParticipantsModal';
 import BookingCard from '../components/home/BookingCard';
 import RoomCard from '../components/home/RoomCard';
+import AvailableRoomsSection from '../components/home/AvailableRoomsSection';
 
 // ─── Date helpers ────────────────────────────────────────────
 const toDateStr = (d) => d.toISOString().split('T')[0];
@@ -64,6 +65,9 @@ export default function HomeScreen({ navigation }) {
   const [branch, setBranch] = useState(BRANCHES[0]);
   const [participants, setParticipants] = useState(8);
   const [tempPart, setTempPart] = useState(8);
+
+  const [hasSearched, setHasSearched] = useState(false);
+  const scrollRef = useRef(null);
 
   // ── Date range
   const today = toDateStr(new Date());
@@ -181,7 +185,7 @@ export default function HomeScreen({ navigation }) {
     extrapolate: 'clamp',
   });
 
- 
+
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.bg }}>
@@ -200,11 +204,18 @@ export default function HomeScreen({ navigation }) {
         onDatePress={() => setShowCalModal(true)}
         onTimePress={() => openTimePicker('start')}
         onParticipantsPress={() => { setTempPart(participants); setShowPart(true); }}
-        onFindRooms={() => navigation.navigate('Explore')}
+        onFindRooms={() => {
+          setHasSearched(true);
+          // Wait slightly for any layout updates, then smooth scroll to the end where results are
+          setTimeout(() => {
+            scrollRef.current?.scrollToEnd({ animated: true });
+          }, 150);
+        }}
       />
 
       {/* ── SCROLLABLE CONTENT ── */}
       <Animated.ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         contentContainerStyle={{
@@ -241,16 +252,13 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* ── AVAILABLE ROOMS ── */}
-        <View style={S.sec}>
-          <SecHd title="Available Now ✨" action="See all"
-            onAction={() => navigation.navigate('Explore')} />
-          {ROOMS.slice(0, 3).map(room => (
-            <TouchableOpacity key={room.id} onPress={() => handleBookRoom(room)}
-              activeOpacity={0.85} style={{ marginBottom: 10 }}>
-              <RoomCard room={room} />
-            </TouchableOpacity>
-          ))}
-        </View>
+        <AvailableRoomsSection
+          hasSearched={hasSearched}
+          searchQueryLabel={`${dateLabel} at ${fmtTime(startH, startM, startAP)}`}
+          rooms={ROOMS.slice(0, 3)}
+          onSeeAll={() => navigation.navigate('Explore')}
+          onBookRoom={handleBookRoom}
+        />
       </Animated.ScrollView>
 
       {/* ── MODALS ── */}

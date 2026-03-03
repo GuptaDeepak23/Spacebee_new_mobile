@@ -6,6 +6,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
 
 // Auth
 import { AuthProvider, useAuth } from '../context/AuthContext';
@@ -34,7 +36,8 @@ const NAV_TABS = [
   { name: 'Profile', label: 'Profile', icon: 'person-circle-outline', iconActive: 'person-circle' },
 ];
 
-const NAV_BG = '#000';               // Mint green pill background
+const NAV_BG = '#111827';               // Soft Elevated Bar Background
+const NAV_BG_GLASS = 'rgba(17, 24, 39, 0.7)'; // Transparent glass effect
 const ICON_OFF = 'rgba(255,255,255,0.6)'; // inactive icon colour
 
 // ── CUSTOM PILL TAB BAR ─────────────────────────────────
@@ -46,27 +49,39 @@ function CustomTabBar({ state, navigation }) {
       style={[TB.safeWrap, { bottom: Math.max(insets.bottom, 16) + 10 }]}
       pointerEvents="box-none"
     >
-      <View style={TB.pill} pointerEvents="auto">
-        {state.routes.map((route, index) => {
-          const focused = state.index === index;
-          const tabInfo = NAV_TABS.find(t => t.name === route.name) || NAV_TABS[0];
-          const onPress = () => { if (!focused) navigation.navigate(route.name); };
+      <View style={TB.pillShadowContainer} pointerEvents="auto">
+        <BlurView intensity={40} tint="dark" style={TB.pill}>
+          {state.routes.map((route, index) => {
+            const focused = state.index === index;
+            const tabInfo = NAV_TABS.find(t => t.name === route.name) || NAV_TABS[0];
+            const onPress = () => { if (!focused) navigation.navigate(route.name); };
 
-          if (focused) {
             return (
-              <TouchableOpacity key={route.key} style={TB.activeCapsule} onPress={onPress} activeOpacity={0.85}>
-                <Ionicons name={tabInfo.iconActive} size={18} color={NAV_BG} />
-                <Text style={TB.activeLabel}>{tabInfo.label}</Text>
+              <TouchableOpacity key={route.key} onPress={onPress} activeOpacity={0.85}>
+                <Animated.View
+                  layout={LinearTransition.springify().damping(15).stiffness(120)}
+                  style={focused ? TB.activeCapsule : TB.iconBtn}
+                >
+                  <Ionicons
+                    name={focused ? tabInfo.iconActive : tabInfo.icon}
+                    size={focused ? 18 : 22}
+                    color={focused ? NAV_BG : ICON_OFF}
+                  />
+                  {focused && (
+                    <Animated.Text
+                      entering={FadeIn.duration(200)}
+                      exiting={FadeOut.duration(200)}
+                      style={TB.activeLabel}
+                      numberOfLines={1}
+                    >
+                      {tabInfo.label}
+                    </Animated.Text>
+                  )}
+                </Animated.View>
               </TouchableOpacity>
             );
-          }
-
-          return (
-            <TouchableOpacity key={route.key} style={TB.iconBtn} onPress={onPress} activeOpacity={0.7}>
-              <Ionicons name={tabInfo.icon} size={22} color={ICON_OFF} />
-            </TouchableOpacity>
-          );
-        })}
+          })}
+        </BlurView>
       </View>
     </View>
   );
@@ -74,14 +89,18 @@ function CustomTabBar({ state, navigation }) {
 
 const TB = StyleSheet.create({
   safeWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: 1000 },
+  pillShadowContainer: {
+    borderRadius: 30,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15, shadowRadius: 10, elevation: 8,
+  },
   pill: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: NAV_BG,
-    borderRadius: 50, paddingVertical: 8, paddingHorizontal: 10, gap: 4,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25, shadowRadius: 20, elevation: 14,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: NAV_BG_GLASS,
+    borderRadius: 30, paddingVertical: 8, paddingHorizontal: 10, gap: 4,
+    overflow: 'hidden',
   },
   iconBtn: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
-  activeCapsule: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 50, paddingVertical: 10, paddingHorizontal: 16, gap: 7 },
+  activeCapsule: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 30, paddingVertical: 10, paddingHorizontal: 16, gap: 7 },
   activeLabel: { fontSize: 13, fontWeight: '700', color: NAV_BG, letterSpacing: 0.1 },
 });
 
