@@ -35,15 +35,22 @@ export function OutBtn({ label, onPress, color = Colors.primary, style }) {
 }
 
 // ── SECTION HEADER ──────────────────────────────────────────
-export function SecHd({ title, action, onAction }) {
+export function SecHd({ title, action, onAction, secondaryAction, onSecondaryAction }) {
   return (
     <View style={SS.secHd}>
       <Text style={SS.secTitle}>{title}</Text>
-      {action && (
-        <TouchableOpacity onPress={onAction}>
-          <Text style={SS.seeAll}>{action}</Text>
-        </TouchableOpacity>
-      )}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12  }}>
+        {secondaryAction && (
+          <TouchableOpacity onPress={onSecondaryAction}>
+            <Text style={[SS.seeAll, { color: Colors.txt3 }]}>{secondaryAction}</Text>
+          </TouchableOpacity>
+        )}
+        {action && (
+          <TouchableOpacity onPress={onAction}>
+            <Text style={SS.seeAll}>{action}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }

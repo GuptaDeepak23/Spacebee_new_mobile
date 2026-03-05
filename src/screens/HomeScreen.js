@@ -1,11 +1,11 @@
 // src/screens/HomeScreen.js
 import React, { useState, useRef } from 'react';
-import { View, TouchableOpacity, Animated, FlatList, Alert, StyleSheet, Text } from 'react-native';
+import { View, TouchableOpacity, Animated, FlatList, Alert, StyleSheet, Text, ActivityIndicator, RefreshControl } from 'react-native';
 import { Colors, Shadows } from '../theme';
 import { SecHd } from '../components/Shared';
-import { BOOKINGS, ROOMS, BRANCHES, QUICK_STATS } from '../data';
+import { ROOMS } from '../data';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useStats } from '../../api/hooks/useApi';
+import { useStats, useBranch, useFindAvailableRoom, useMyBookingHome, useExploreRooms } from '../../api/hooks/useApi';
 
 // ── Home sub-components
 import HeroSection from '../components/home/HeroSection';
@@ -16,6 +16,9 @@ import ParticipantsModal from '../components/home/ParticipantsModal';
 import BookingCard from '../components/home/BookingCard';
 import RoomCard from '../components/home/RoomCard';
 import AvailableRoomsSection from '../components/home/AvailableRoomsSection';
+
+
+
 
 // ─── Date helpers ────────────────────────────────────────────
 const toDateStr = (d) => d.toISOString().split('T')[0];
@@ -62,9 +65,10 @@ const timeDiffHrs = (sh, sm, sap, eh, em, eap) => {
 // ─── Main Screen ─────────────────────────────────────────────
 export default function HomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const [branch, setBranch] = useState(BRANCHES[0]);
+  const [branch, setBranch] = useState(null);
   const [participants, setParticipants] = useState(8);
   const [tempPart, setTempPart] = useState(8);
+  const [foundRooms, setFoundRooms] = useState([]);
 
   const [hasSearched, setHasSearched] = useState(false);
   const scrollRef = useRef(null);
@@ -77,33 +81,115 @@ export default function HomeScreen({ navigation }) {
   const [showCalModal, setShowCalModal] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
 
-  // ── Time (stored as components for custom picker)
-  const [startH, setStartH] = useState(10);
+  // ── Time (dynamic based on current hour)
+  const now = new Date();
+  const curH = now.getHours(); // 0-23
+
+  const getInitialTime = (offset = 0) => {
+    let h = (curH + offset) % 24;
+    const ap = h >= 12 ? 'PM' : 'AM';
+    let h12 = h % 12;
+    if (h12 === 0) h12 = 12;
+    return { h: h12, m: 0, ap };
+  };
+
+  const startT = getInitialTime(1);
+  const endT = getInitialTime(2);
+
+  const [startH, setStartH] = useState(startT.h);
   const [startM, setStartM] = useState(0);
-  const [startAP, setStartAP] = useState('AM');
-  const [endH, setEndH] = useState(12);
+  const [startAP, setStartAP] = useState(startT.ap);
+  const [endH, setEndH] = useState(endT.h);
   const [endM, setEndM] = useState(0);
-  const [endAP, setEndAP] = useState('PM');
+  const [endAP, setEndAP] = useState(endT.ap);
 
   // Custom time picker modal state
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [timeStep, setTimeStep] = useState('start');
-  const [pickH, setPickH] = useState(10);
+  const [pickH, setPickH] = useState(startT.h);
   const [pickM, setPickM] = useState(0);
-  const [pickAP, setPickAP] = useState('AM');
+  const [pickAP, setPickAP] = useState(startT.ap);
 
   // Modal flags
   const [showBranch, setShowBranch] = useState(false);
   const [showPart, setShowPart] = useState(false);
 
-  const upcomings = BOOKINGS.filter(b => b.status !== 'cancelled');
 
-  const { data: statsData, isLoading: statsLoading, error: statsError } = useStats();
+
+  const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useStats();
+  const { data: branchData, isLoading: branchLoading, refetch: refetchBranch } = useBranch();
+  const { mutate: findRooms, isLoading: roomLoading } = useFindAvailableRoom();
+  const { data: myBookingsData, isLoading: bookingsLoading, refetch: refetchBookings } = useMyBookingHome();
+  const { data: exploreData, isLoading: exploreLoading, refetch: refetchExplore } = useExploreRooms('available');
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    console.log('REFRESHING...');
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        refetchStats(),
+        refetchBranch(),
+        refetchBookings(),
+        refetchExplore()
+      ]);
+    } catch (e) {
+      console.log('Refresh error:', e);
+    }
+    setRefreshing(false);
+  };
+
+  const handleHeroFindRooms = (payload) => {
+    const toISO = (dateStr, h, m, ap) => {
+      let hh = parseInt(h, 10);
+      if (ap === 'PM' && hh < 12) hh += 12;
+      if (ap === 'AM' && hh === 12) hh = 0;
+      return `${dateStr}T${hh.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00`;
+    };
+
+    const searchData = {
+      branch_id: payload.branch?.id,
+      start_time: toISO(payload.fromDate, payload.startH, payload.startM, payload.startAP),
+      end_time: toISO(payload.toDate || payload.fromDate, payload.endH, payload.endM, payload.endAP),
+      capacity: payload.participants,
+    };
+
+    findRooms(searchData, {
+      onSuccess: (res) => {
+        setFoundRooms(res.rooms || res.data || []);
+        setHasSearched(true);
+        setTimeout(() => {
+          scrollRef.current?.scrollTo({
+            y: 500, // adjust this value based on where your result section starts
+            animated: true,
+          });
+        }, 100);
+      }
+    });
+  };
+
+  React.useEffect(() => {
+    if (branchData?.length > 0 && !branch) {
+      setBranch(branchData[0]);
+    }
+  }, [branchData, branch]);
 
   // ── Room booking ─────────────────────────────────────────────
   const handleBookRoom = (room) => {
-    if (!room.isAvailable) { Alert.alert('Unavailable', 'This room is currently busy.'); return; }
-    navigation.navigate('BookRoom', { room });
+    const isAvail = room.is_available === true || room.status === 'available';
+    if (!isAvail) { Alert.alert('Unavailable', 'This room is currently busy.'); return; }
+    navigation.navigate('BookRoom', {
+      room,
+      searchData: {
+        fromDate,
+        toDate: toDate || fromDate,
+        startH, startM, startAP,
+        endH, endM, endAP,
+        participants,
+        hasSearched
+      }
+    });
   };
 
   // ── Calendar logic ──────────────────────────────────────────
@@ -170,7 +256,7 @@ export default function HomeScreen({ navigation }) {
 
   // ── Sliver / collapsing hero ──────────────────────────────
   const HERO_MAX = 520;
-  const HERO_MIN = 88;
+  const HERO_MIN = 100;
   const SCROLL_DIST = HERO_MAX - HERO_MIN;
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -186,6 +272,11 @@ export default function HomeScreen({ navigation }) {
   });
 
 
+
+  const handleClearSearch = () => {
+    setHasSearched(false);
+    setFoundRooms([]);
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.bg }}>
@@ -204,13 +295,10 @@ export default function HomeScreen({ navigation }) {
         onDatePress={() => setShowCalModal(true)}
         onTimePress={() => openTimePicker('start')}
         onParticipantsPress={() => { setTempPart(participants); setShowPart(true); }}
-        onFindRooms={() => {
-          setHasSearched(true);
-          // Wait slightly for any layout updates, then smooth scroll to the end where results are
-          setTimeout(() => {
-            scrollRef.current?.scrollToEnd({ animated: true });
-          }, 150);
-        }}
+        onFindRooms={handleHeroFindRooms}
+        startH={startH} startM={startM} startAP={startAP}
+        endH={endH} endM={endM} endAP={endAP}
+        isLoading={roomLoading}
       />
 
       {/* ── SCROLLABLE CONTENT ── */}
@@ -226,10 +314,20 @@ export default function HomeScreen({ navigation }) {
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }
         )}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            progressViewOffset={HERO_MIN + 20}
+            colors={[Colors.primary]}
+            tintColor={Colors.primary}
+          />
+        }
       >
         {/* ── QUICK STATS ── */}
+
         <View style={S.statsRow}>
-          {QUICK_STATS.map((s, i) => (
+          {statsData?.stat?.map((s, i) => (
             <View key={i} style={[S.statCard, Shadows.card]}>
               <Text style={[S.statNum, { color: s.color }]}>{s.value}</Text>
               <Text style={S.statLbl}>{s.label.toUpperCase()}</Text>
@@ -237,28 +335,54 @@ export default function HomeScreen({ navigation }) {
           ))}
         </View>
 
-        {/* ── UPCOMING BOOKINGS ── */}
         <View style={S.sec}>
-          <SecHd title="Upcoming Bookings 🔔" action="See all"
+          <SecHd title="Ongoing & Upcoming 🔔" action="See all"
             onAction={() => navigation.navigate('Bookings')} />
-          <FlatList horizontal showsHorizontalScrollIndicator={false}
-            data={upcomings} keyExtractor={i => i.id}
-            ItemSeparatorComponent={() => <View style={{ width: 11 }} />}
-            renderItem={({ item }) => (
-              <TouchableOpacity onPress={() => navigation.navigate('BookingDetail', { booking: item })} activeOpacity={0.85}>
-                <BookingCard booking={item} />
-              </TouchableOpacity>
-            )} />
+          {bookingsLoading ? (
+            <ActivityIndicator color={Colors.primary} style={{ marginTop: 20 }} />
+          ) : (
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={myBookingsData?.bookings || []}
+              keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+              ItemSeparatorComponent={() => <View style={{ width: 11 }} />}
+              renderItem={({ item }) => (
+                <TouchableOpacity onPress={() => navigation.navigate('BookingDetail', { booking: item })} activeOpacity={0.85}>
+                  <BookingCard booking={item} />
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={() => (
+                <View style={{ paddingVertical: 10 }}>
+                  <Text style={{ fontSize: 13, color: Colors.txt3 }}>No bookings found.</Text>
+                </View>
+              )}
+            />
+          )}
         </View>
 
         {/* ── AVAILABLE ROOMS ── */}
+
         <AvailableRoomsSection
           hasSearched={hasSearched}
           searchQueryLabel={`${dateLabel} at ${fmtTime(startH, startM, startAP)}`}
-          rooms={ROOMS.slice(0, 3)}
-          onSeeAll={() => navigation.navigate('Explore')}
+          rooms={hasSearched ? foundRooms : (Array.isArray(exploreData) ? exploreData : [])}
+          onSeeAll={() => navigation.navigate('Explore', {
+            searchData: {
+              branch,
+              fromDate,
+              toDate,
+              startH, startM, startAP,
+              endH, endM, endAP,
+              participants,
+              hasSearched
+            }
+          })}
           onBookRoom={handleBookRoom}
+          onClearSearch={handleClearSearch}
+          isLoading={roomLoading || exploreLoading}
         />
+
       </Animated.ScrollView>
 
       {/* ── MODALS ── */}
@@ -283,10 +407,8 @@ export default function HomeScreen({ navigation }) {
         pickH={pickH} pickM={pickM} pickAP={pickAP}
         startH={startH} startM={startM} startAP={startAP}
         endH={endH} endM={endM} endAP={endAP}
-        onIncH={() => setPickH(h => h >= 12 ? 1 : h + 1)}
-        onDecH={() => setPickH(h => h <= 1 ? 12 : h - 1)}
-        onIncM={() => setPickM(m => m >= 55 ? 0 : m + 5)}
-        onDecM={() => setPickM(m => m <= 0 ? 55 : m - 5)}
+        onSetH={setPickH}
+        onSetM={setPickM}
         onSetAP={setPickAP}
         onNextOrConfirm={onNextOrConfirm}
         onCancel={onCancelTime}
@@ -294,7 +416,7 @@ export default function HomeScreen({ navigation }) {
 
       <BranchModal
         visible={showBranch}
-        branches={BRANCHES}
+        branches={branchData || []}
         selected={branch}
         onSelect={setBranch}
         onClose={() => setShowBranch(false)}

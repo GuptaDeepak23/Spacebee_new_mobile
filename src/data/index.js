@@ -1,13 +1,8 @@
 // src/data/index.js
 
-export const BRANCHES = [
-  'HQ – Andheri East, Mumbai',
-  'Powai – Floor 3, Mumbai',
-  'BKC – Tower C, Mumbai',
-  'Pune – Hinjewadi Phase 1',
-  'Bangalore – Koramangala',
-  'Hyderabad – Hitec City',
-];
+
+
+
 
 export const BOOKINGS = [
   {
@@ -135,13 +130,8 @@ export const PROFILE_MENU = [
   { id: '5', icon: '❓', color: '#10B981', label: 'Help & Support' },
   { id: '6', icon: '🚪', color: '#EF4444', label: 'Log Out' },
 ];
+ 
 
-export const QUICK_STATS = [
-  { value: '3', label: 'Upcoming', color: '#1A4D8F' },
-  { value: '12', label: 'Total Rooms', color: '#0AAFA0' },
-  { value: '24', label: 'Rooms Free', color: '#1a936bff' },
-  { value: '24', label: 'My Booking', color: '#0c5039ff' },
-];
 
 // ── Helpers ────────────────────────────
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

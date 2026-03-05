@@ -5,6 +5,7 @@ import { RoomThumb } from '../Shared';
 import { Colors } from '../../theme';
 
 export default function RoomCard({ room }) {
+    const isAvailable = room.is_available === true || room.status === 'available';
     return (
         <View style={S.card}>
             <RoomThumb theme={room.theme} />
@@ -13,9 +14,9 @@ export default function RoomCard({ room }) {
                 <Text style={S.floor} numberOfLines={1}>🏠 {room.floor}</Text>
                 <Text style={{ fontSize: 10.5, color: Colors.txt2 }}>👥 Up to {room.capacity} people</Text>
             </View>
-            <View style={[S.avail, { backgroundColor: room.isAvailable ? '#D1FAE5' : '#FEE2E2' }]}>
-                <Text style={{ fontSize: 10.5, fontWeight: '600', color: room.isAvailable ? Colors.sGreen : Colors.sRed }}>
-                    {room.isAvailable ? 'Available' : 'Occupied'}
+            <View style={[S.avail, { backgroundColor: isAvailable ? '#D1FAE5' : '#FEE2E2' }]}>
+                <Text style={{ fontSize: 10.5, fontWeight: '600', color: isAvailable ? Colors.sGreen : Colors.sRed }}>
+                    {isAvailable ? 'Available' : 'Occupied'}
                 </Text>
             </View>
         </View>

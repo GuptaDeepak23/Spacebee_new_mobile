@@ -3,7 +3,7 @@ import * as SecureStore from "expo-secure-store";
 import Toast from "react-native-toast-message";
 
 const axiosInstance = axios.create({
-    baseURL: "https://spacebee-uat.kanishkatech.com/backend/api",
+    baseURL: "http://192.168.1.60:8002/api",
     timeout: 10000,
     headers: {
         "Content-Type": "application/json",

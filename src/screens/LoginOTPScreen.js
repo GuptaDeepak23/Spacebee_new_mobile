@@ -1,12 +1,12 @@
 // src/screens/LoginOTPScreen.js
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     View, Text, TextInput, TouchableOpacity, StyleSheet,
     KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
-import { useVerifyOtp } from '../../api/hooks/useApi';
+import { useVerifyOtp, useRequestOtp } from '../../api/hooks/useApi';
 import { ActivityIndicator } from 'react-native';
 import Toast from 'react-native-toast-message';
 import * as SecureStore from 'expo-secure-store';
@@ -17,8 +17,32 @@ export default function LoginOTPScreen({ route, navigation }) {
     const { email } = route.params;
     const { login } = useAuth();
     const { mutate: verifyOtpMutation, isPending } = useVerifyOtp();
+    const { mutate: requestOtpMutation } = useRequestOtp();
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
+    const [timer, setTimer] = useState(60);
     const inputs = useRef([]);
+
+    useEffect(() => {
+        let interval;
+        if (timer > 0) {
+            interval = setInterval(() => {
+                setTimer((prev) => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [timer]);
+
+    const handleResend = () => {
+        if (timer > 0) return;
+
+        requestOtpMutation(email, {
+            onSuccess: () => {
+                setTimer(60);
+                setOtp(['', '', '', '', '', '']);
+                inputs.current[0]?.focus();
+            }
+        });
+    };
 
     const handleChange = (text, index) => {
         const newOtp = [...otp];
@@ -52,7 +76,7 @@ export default function LoginOTPScreen({ route, navigation }) {
                     text1: 'OTP verified successfully',
                     text2: data.message,
                 });
-                login(email);
+                login(email, data.user);
             },
             onError: (error) => {
                 Toast.show({
@@ -110,8 +134,17 @@ export default function LoginOTPScreen({ route, navigation }) {
                         )}
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={S.resendBtn}>
-                        <Text style={S.resendText}>Didn't receive a code? <Text style={S.resendLink}>Resend</Text></Text>
+                    <TouchableOpacity
+                        style={S.resendBtn}
+                        onPress={handleResend}
+                        disabled={timer > 0}
+                    >
+                        <Text style={S.resendText}>
+                            Didn't receive a code?{' '}
+                            <Text style={[S.resendLink, timer > 0 && { color: '#999' }]}>
+                                {timer > 0 ? `Resend in ${timer}s` : 'Resend'}
+                            </Text>
+                        </Text>
                     </TouchableOpacity>
                 </ScrollView>
             </KeyboardAvoidingView>

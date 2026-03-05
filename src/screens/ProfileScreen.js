@@ -15,7 +15,7 @@ const STATS = [
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { logout } = useAuth();
+  const { userData, logout } = useAuth();
 
   return (
     <SafeAreaView style={S.safe}>
@@ -24,11 +24,11 @@ export default function ProfileScreen() {
         {/* HERO */}
         <LinearGradient colors={Gradients.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={S.hero}>
           <LinearGradient colors={Gradients.avatar} style={S.ava}>
-            <Text style={S.avaTxt}>VM</Text>
+            <Text style={S.avaTxt}>{userData?.name ? userData.name.substring(0, 2).toUpperCase() : 'ME'}</Text>
           </LinearGradient>
-          <Text style={S.name}>Vikas Maurya</Text>
-          <Text style={S.role}>Senior Product Designer</Text>
-          <Text style={S.dept}>HQ – Andheri East, Mumbai</Text>
+          <Text style={S.name}>{userData?.name || 'User Name'}</Text>
+          <Text style={S.role}>{userData?.employee_role || 'Employee'}</Text>
+          <Text style={S.dept}>{userData?.branch_name || 'Assigned Branch'}</Text>
 
           {/* Stats */}
           <View style={S.statsRow}>

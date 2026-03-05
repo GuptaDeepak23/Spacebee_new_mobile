@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity, ImageBackground, Animated, StyleSheet } f
 import { LinearGradient } from 'expo-linear-gradient';
 import { GradBtn } from '../Shared';
 import { Colors, Gradients } from '../../theme';
+import { ActivityIndicator } from 'react-native';
 
 export default function HeroSection({
     heroHeight,
@@ -19,9 +20,24 @@ export default function HeroSection({
     onTimePress,
     onParticipantsPress,
     onFindRooms,
+    startH, startM, startAP,
+    endH, endM, endAP,
+    isLoading
 }) {
+    const handleFindRooms = () => {
+        onFindRooms({
+            branch,
+            dateLabel,
+            timeLabel,
+            toDate,
+            fromDate,
+            participants,
+            startH, startM, startAP,
+            endH, endM, endAP,
+        });
+    };
     return (
-        
+
         <Animated.View style={[S.heroAnimWrap, { height: heroHeight }]}>
             <ImageBackground
                 source={require('../../../assets/dum.jpg')}
@@ -55,7 +71,7 @@ export default function HeroSection({
                                 <Text style={S.glassIcon}>📍</Text>
                                 <View style={{ flex: 1, marginLeft: 10 }}>
                                     <Text style={S.glassLbl}>OFFICE BRANCH</Text>
-                                    <Text style={S.glassVal} numberOfLines={1}>{branch}</Text>
+                                    <Text style={S.glassVal} numberOfLines={1}>{branch?.name || branch || 'Select Branch'}</Text>
                                 </View>
                                 <Text style={S.glassCaret}>▾</Text>
                             </TouchableOpacity>
@@ -94,8 +110,16 @@ export default function HeroSection({
                             </View>
 
                             <View style={{ marginTop: 16 }}>
-                                <TouchableOpacity style={{ backgroundColor: '#22BF96', padding: 12, borderRadius: 12 }} onPress={onFindRooms}>
-                                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15, textAlign: 'center' }}>🔍 Find Available Rooms</Text>
+                                <TouchableOpacity
+                                    style={{ backgroundColor: '#22BF96', padding: 12, borderRadius: 12, opacity: isLoading ? 0.7 : 1 }}
+                                    onPress={handleFindRooms}
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? (
+                                        <ActivityIndicator color="#fff" />
+                                    ) : (
+                                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15, textAlign: 'center' }}>🔍 Find Available Rooms</Text>
+                                    )}
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -104,7 +128,7 @@ export default function HeroSection({
                 </View>
             </ImageBackground>
         </Animated.View>
-        
+
     );
 }
 

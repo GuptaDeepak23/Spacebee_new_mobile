@@ -11,17 +11,17 @@ export default function BranchModal({ visible, branches, selected, onSelect, onC
                 <View style={S.sheet}>
                     <PickerHandle />
                     <Text style={S.sheetTitle}>Select Office Branch</Text>
-                    {branches.map((b) => (
+                    {branches.map((b, index) => (
                         <TouchableOpacity
-                            key={b}
+                            key={b.id || index}
                             style={S.pickRow}
                             onPress={() => { onSelect(b); onClose(); }}
                         >
                             <Text>📍</Text>
-                            <Text style={[S.pickTxt, b === selected && { color: Colors.primary, fontWeight: '600' }]}>
-                                {b}
+                            <Text style={[S.pickTxt, (b.id === selected?.id || b === selected) && { color: Colors.primary, fontWeight: '600' }]}>
+                                {b.name || b}
                             </Text>
-                            {b === selected && <Text style={{ color: Colors.primary }}>✓</Text>}
+                            {(b.id === selected?.id || b === selected) && <Text style={{ color: Colors.primary }}>✓</Text>}
                         </TouchableOpacity>
                     ))}
                 </View>

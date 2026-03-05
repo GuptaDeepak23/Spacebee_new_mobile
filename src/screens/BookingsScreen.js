@@ -7,7 +7,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient';
 import { GradHeader, StatusBadge } from '../components/Shared';
 import { Colors, Shadows, statusStyle, Gradients } from '../theme';
-import { BOOKINGS } from '../data';
+import { ActivityIndicator, FlatList } from 'react-native';
+import { useBookings, useAllBooking } from '../../api/hooks/useApi';
 
 
 // ─── Constants ───────────────────────────────────────────────
@@ -15,10 +16,10 @@ const MAIN_TABS = ['My Booking', 'All Booking'];
 const SUB_TABS = ['Upcoming', 'Ongoing', 'Past', 'Cancelled'];
 
 const STATUS_MAP = {
-  Upcoming: 'upcoming',
-  Ongoing: 'ongoing',
-  Past: 'past',
-  Cancelled: 'cancelled',
+  Upcoming: 'Upcoming',
+  Ongoing: 'Started',
+  Past: 'Completed',
+  Cancelled: 'Cancelled',
 };
 
 const SUB_TAB_ICONS = {
@@ -30,27 +31,46 @@ const SUB_TAB_ICONS = {
 
 // ─── Main Screen ─────────────────────────────────────────────
 export default function BookingsScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [mainTab, setMainTab] = useState(0); // 0 = My Booking, 1 = All Booking
   const [subTab, setSubTab] = useState(0); // 0-3 → Upcoming/Ongoing/Past/Cancelled
 
+  const statusKey = STATUS_MAP[SUB_TABS[subTab]];
+
+  const {
+    data: myBookingsData,
+    fetchNextPage: fetchNextMy,
+    hasNextPage: hasNextMy,
+    isFetchingNextPage: isFetchingNextMy,
+    isLoading: isLoadingMy,
+    refetch: refetchMy,
+  } = useBookings(statusKey, { enabled: mainTab === 0 });
+
+  const {
+    data: allBookingsData,
+    fetchNextPage: fetchNextAll,
+    hasNextPage: hasNextAll,
+    isFetchingNextPage: isFetchingNextAll,
+    isLoading: isLoadingAll,
+    refetch: refetchAll,
+  } = useAllBooking(statusKey, { enabled: mainTab === 1 });
+
+  const isLoading = mainTab === 0 ? isLoadingMy : isLoadingAll;
+  const isFetchingNextPage = mainTab === 0 ? isFetchingNextMy : isFetchingNextAll;
+  const hasNextPage = mainTab === 0 ? hasNextMy : hasNextAll;
+  const fetchNextPage = mainTab === 0 ? fetchNextMy : fetchNextAll;
+  const refetch = mainTab === 0 ? refetchMy : refetchAll;
+
+  const bookings = mainTab === 0
+    ? (myBookingsData?.pages.flatMap(page => page.bookings || page.data || []) || [])
+    : (allBookingsData?.pages.flatMap(page => page.bookings || page.data || []) || []);
+
+  const totalCount = mainTab === 0
+    ? (myBookingsData?.pages[0]?.total || bookings.length)
+    : (allBookingsData?.pages[0]?.total || bookings.length);
+
   const switchMain = (idx) => {
     setMainTab(idx);
-  };
-
-  // Filter bookings
-  const statusKey = STATUS_MAP[SUB_TABS[subTab]];
-  const filtered = BOOKINGS.filter(b => {
-    const matchOwner = mainTab === 0 ? b.bookedBy === 'me' : true;
-    return matchOwner && b.status === statusKey;
-  });
-
-  // Count badges per sub-tab
-  const countFor = (label) => {
-    const sk = STATUS_MAP[label];
-    return BOOKINGS.filter(b => {
-      const matchOwner = mainTab === 0 ? b.bookedBy === 'me' : true;
-      return matchOwner && b.status === sk;
-    }).length;
   };
 
   return (
@@ -65,7 +85,7 @@ export default function BookingsScreen({ navigation }) {
             </Text>
           </View>
           <View style={S.countBubble}>
-            <Text style={S.countBubbleTxt}>{filtered.length}</Text>
+            <Text style={S.countBubbleTxt}>{totalCount}</Text>
             <Text style={S.countBubbleLbl}>Total</Text>
           </View>
         </View>
@@ -92,8 +112,7 @@ export default function BookingsScreen({ navigation }) {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={S.subTabRow}>
           {SUB_TABS.map((t, i) => {
             const active = i === subTab;
-            const cnt = countFor(t);
-            const ss = statusStyle(STATUS_MAP[t]);
+            const ss = statusStyle(STATUS_MAP[t].toLowerCase()); // Match theme keys
             return (
               <TouchableOpacity
                 key={t}
@@ -101,13 +120,7 @@ export default function BookingsScreen({ navigation }) {
                 onPress={() => setSubTab(i)}
                 activeOpacity={0.8}
               >
-                {/* <Text style={S.subChipIcon}>{SUB_TAB_ICONS[t]}</Text> */}
                 <Text style={[S.subChipTxt, active && { color: ss.txt, fontWeight: '700' }]}>{t}</Text>
-                {/* {cnt > 0 && (
-                  <View style={[S.badge, { backgroundColor: active ? ss.txt : Colors.txt3 }]}>
-                    <Text style={S.badgeTxt}>{cnt}</Text>
-                  </View>
-                )} */}
               </TouchableOpacity>
             );
           })}
@@ -115,33 +128,59 @@ export default function BookingsScreen({ navigation }) {
       </View>
 
       {/* ── BOOKING LIST ── */}
-      <ScrollView
-        contentContainerStyle={[S.list, { paddingBottom: 100 + (useSafeAreaInsets().bottom || 0) }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {filtered.length === 0 ? (
-          <EmptyState status={SUB_TABS[subTab]} />
-        ) : (
-          filtered.map(b => (
+      {isLoading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={bookings}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={[S.list, { paddingBottom: 100 + (insets.bottom || 0) }]}
+          showsVerticalScrollIndicator={false}
+          onRefresh={refetch}
+          refreshing={false}
+          onEndReached={() => {
+            if (hasNextPage) fetchNextPage();
+          }}
+          onEndReachedThreshold={0.5}
+          ListEmptyComponent={() => <EmptyState status={SUB_TABS[subTab]} />}
+          ListFooterComponent={() => isFetchingNextPage ? (
+            <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: 10 }} />
+          ) : null}
+          renderItem={({ item }) => (
             <TouchableOpacity
-              key={b.id}
-              onPress={() => navigation.navigate('BookingDetail', { booking: b })}
+              onPress={() => navigation.navigate('BookingDetail', { booking: item, isAllBooking: mainTab === 1 })}
               activeOpacity={0.85}
               style={{ marginBottom: 12 }}
             >
-              <BookingCard booking={b} />
+              <BookingCard booking={item} isAllBooking={mainTab === 1} />
             </TouchableOpacity>
-          ))
-        )}
-        <View style={{ height: 16 }} />
-      </ScrollView>
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
 // ─── Booking Card ─────────────────────────────────────────────
-function BookingCard({ booking }) {
-  const ss = statusStyle(booking.status);
+function BookingCard({ booking, isAllBooking }) {
+  const ss = statusStyle(booking.status.toLowerCase());
+  const d = new Date(booking.start_time);
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const day = d.getDate();
+  const month = months[d.getMonth()];
+
+  const fmtHHMM = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    let h = d.getHours();
+    const m = d.getMinutes().toString().padStart(2, '0');
+    const ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${m} ${ap}`;
+  };
+
   return (
     <View style={[BC.card, Shadows.card]}>
       {/* Left accent bar */}
@@ -149,8 +188,8 @@ function BookingCard({ booking }) {
 
       {/* Date column */}
       <View style={BC.datecol}>
-        <Text style={[BC.day, { color: ss.txt }]}>{booking.day}</Text>
-        <Text style={BC.mon}>{booking.month}</Text>
+        <Text style={[BC.day, { color: ss.txt }]}>{day}</Text>
+        <Text style={BC.mon}>{month}</Text>
       </View>
 
       {/* Divider */}
@@ -158,14 +197,14 @@ function BookingCard({ booking }) {
 
       {/* Main info */}
       <View style={{ flex: 1, padding: 10 }}>
-        <Text style={BC.rname} numberOfLines={1}>{booking.room}</Text>
-        <Text style={BC.meta}>📍 {booking.location}</Text>
-        <Text style={BC.meta}>⏰ {booking.timeRange} · {booking.duration}</Text>
-        {booking.bookedBy === 'other' && (
-          <Text style={BC.otherUser}>👤 Booked by colleague</Text>
+        <Text style={BC.rname} numberOfLines={1}>{booking.room?.name || 'Meeting Room'}</Text>
+        <Text style={BC.meta}>📍 {booking.room?.branch_name || 'Main Office'}</Text>
+        <Text style={BC.meta}>⏰ {fmtHHMM(booking.start_time)} - {fmtHHMM(booking.end_time)} · {booking.booking_duration}</Text>
+        {isAllBooking && booking.employee?.name && (
+          <Text style={BC.otherUser}>👤 <Text style={{ fontWeight: 'bold' }}>Booked by :- </Text>{`${booking.employee.name}`}</Text>
         )}
         <View style={{ marginTop: 2, alignSelf: 'flex-start' }}>
-          <StatusBadge status={booking.status} />
+          <StatusBadge status={booking.status.toLowerCase()} />
         </View>
       </View>
 

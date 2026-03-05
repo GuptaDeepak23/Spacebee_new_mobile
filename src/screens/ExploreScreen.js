@@ -7,25 +7,32 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { GradHeader, RoomThumb, RoomTag, StatusBadge, GradBtn } from '../components/Shared';
 import { Colors, Shadows, Gradients } from '../theme';
 import { ROOMS } from '../data';
+import { useExploreRooms } from '../../api/hooks/useApi';
+import { ActivityIndicator } from 'react-native';
 
-export default function ExploreScreen({ navigation }) {
+export default function ExploreScreen({ route, navigation }) {
+  const insets = useSafeAreaInsets();
+  const searchData = route.params?.searchData;
   const [query, setQuery] = useState('');
-  const [avail, setAvail] = useState('All'); // 'All' | 'Available' | 'Occupied'
+  const [avail, setAvail] = useState('all'); // 'all' | 'available' | 'occupied'
+
+  const { data: exploreData, isLoading } = useExploreRooms(avail);
+
+  const rooms = Array.isArray(exploreData) ? exploreData : [];
 
   const filtered = useMemo(() => {
-    let list = ROOMS;
+    let list = rooms;
     if (query) list = list.filter(r =>
       r.name.toLowerCase().includes(query.toLowerCase()) ||
-      r.tags.some(t => t.toLowerCase().includes(query.toLowerCase()))
+      (r.tags && r.tags.some(t => t.toLowerCase().includes(query.toLowerCase())))
     );
-    if (avail === 'Available') list = list.filter(r => r.isAvailable);
-    if (avail === 'Occupied') list = list.filter(r => !r.isAvailable);
     return list;
-  }, [query, avail]);
+  }, [query, rooms]);
 
   const handleBook = (room) => {
-    if (!room.isAvailable) { Alert.alert('Unavailable', 'This room is currently busy.'); return; }
-    navigation.navigate('BookRoom', { room });
+    const isAvail = room.is_available === true || room.status === 'available';
+    if (!isAvail) { Alert.alert('Unavailable', 'This room is currently busy.'); return; }
+    navigation.navigate('BookRoom', { room, searchData });
   };
 
   return (
@@ -53,19 +60,20 @@ export default function ExploreScreen({ navigation }) {
       {/* AVAILABILITY FILTER */}
       <View style={S.filterWrap}>
         <View style={S.filterRow}>
-          {['All', 'Available', 'Occupied'].map(opt => {
+          {['all', 'available', 'occupied'].map(opt => {
             const isActive = avail === opt;
-            const dotColor = opt === 'Available' ? Colors.sGreen : opt === 'Occupied' ? Colors.sRed : Colors.primary;
+            const label = opt.charAt(0).toUpperCase() + opt.slice(1);
+            const dotColor = opt === 'available' ? Colors.sGreen : opt === 'occupied' ? Colors.sRed : Colors.primary;
             return (
               <TouchableOpacity
                 key={opt}
                 style={[S.chip, isActive && S.chipActive]}
                 onPress={() => setAvail(opt)}
               >
-                {opt !== 'All' && (
+                {opt !== 'all' && (
                   <Text style={{ fontSize: 8, color: isActive ? '#fff' : dotColor, marginRight: 4 }}>●</Text>
                 )}
-                <Text style={[S.chipTxt, isActive && S.chipTxtActive]}>{opt}</Text>
+                <Text style={[S.chipTxt, isActive && S.chipTxtActive]}>{label}</Text>
               </TouchableOpacity>
             );
           })}
@@ -75,9 +83,11 @@ export default function ExploreScreen({ navigation }) {
       {/* ROOM LIST */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[S.grid, { paddingBottom: 100 + (useSafeAreaInsets().bottom || 0) }]}
+        contentContainerStyle={[S.grid, { paddingBottom: 100 + (insets.bottom || 0) }]}
       >
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <ActivityIndicator color={Colors.primary} size="large" style={{ marginTop: 40 }} />
+        ) : filtered.length === 0 ? (
           <View style={S.empty}>
             <Text style={{ fontSize: 40 }}>🔍</Text>
             <Text style={S.emptyTxt}>No rooms found</Text>
@@ -107,9 +117,9 @@ function ExploreRoomCard({ room }) {
             <Text style={RC.name} numberOfLines={1}>{room.name}</Text>
             <Text style={RC.floor} numberOfLines={1}>🏠 {room.floor}</Text>
           </View>
-          <View style={[RC.avail, { backgroundColor: room.isAvailable ? '#D1FAE5' : '#FEE2E2' }]}>
-            <Text style={{ fontSize: 10, fontWeight: '600', color: room.isAvailable ? Colors.sGreen : Colors.sRed }}>
-              {room.isAvailable ? '● Available' : '● Occupied'}
+          <View style={[RC.avail, { backgroundColor: (room.is_available === true || room.status === 'available') ? '#D1FAE5' : '#FEE2E2' }]}>
+            <Text style={{ fontSize: 10, fontWeight: '600', color: (room.is_available === true || room.status === 'available') ? Colors.sGreen : Colors.sRed }}>
+              {(room.is_available === true || room.status === 'available') ? '● Available' : '● Occupied'}
             </Text>
           </View>
         </View>
@@ -118,7 +128,7 @@ function ExploreRoomCard({ room }) {
         </View> */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text style={{ fontSize: 11, color: Colors.txt2 }}>👥 Up to {room.capacity} people</Text>
-          {room.isAvailable && (
+          {(room.is_available === true || room.status === 'available') && (
             <View style={RC.bookHint}>
               <Text style={{ fontSize: 10, color: Colors.primary, fontWeight: '600' }}>Book Now +</Text>
             </View>
