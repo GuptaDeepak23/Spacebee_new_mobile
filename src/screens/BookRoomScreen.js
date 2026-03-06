@@ -60,6 +60,8 @@ export default function BookRoomScreen({ route, navigation }) {
   const initialPart = searchData?.participants || 8;
   const [participants, setParticipants] = useState(initialPart);
   const [meetingType, setMeetingType] = useState('internal'); // 'internal' or 'external'
+  const [isManualEdit, setIsManualEdit] = useState(false);
+
 
   const startTime = `${startH}:${startM.toString().padStart(2, '0')} ${startAP}`;
   const endTime = `${endH}:${endM.toString().padStart(2, '0')} ${endAP}`;
@@ -177,7 +179,6 @@ export default function BookRoomScreen({ route, navigation }) {
     // Direct API Confirm - matching the requested layout
     const payload = {
       capacity: booking.participants,
-      employee_id: userData?.id || 34,
       end_time: booking.isoEndTime,
       meeting_type: booking.meetingType,
       room_id: room.id,
@@ -209,14 +210,16 @@ export default function BookRoomScreen({ route, navigation }) {
         </View>
 
         {/* SEARCH AND CONFIG SUMMARY */}
-        {searchData?.hasSearched ? (
+        {searchData?.hasSearched && !isManualEdit ? (
           <View style={[S.summaryCard, Shadows.card]}>
+
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
               <Text style={{ fontWeight: '700', fontSize: 14, color: Colors.primary }}>✨ Your Selection</Text>
-              <TouchableOpacity onPress={() => navigation.goBack()}>
+              <TouchableOpacity onPress={() => setIsManualEdit(true)}>
                 <Text style={{ color: '#22BF96', fontWeight: '700', fontSize: 13 }}>✏️ Edit</Text>
               </TouchableOpacity>
             </View>
+
             <View style={S.summaryRow}>
               <Text style={S.summaryTxt}>📅  {fromDate === toDate ? fmtDate(new Date(fromDate)) : `${fmtDate(new Date(fromDate))} - ${fmtDate(new Date(toDate))}`}</Text>
               <Text style={S.summaryTxt}>⏰  {startTime} – {endTime}</Text>
@@ -226,9 +229,21 @@ export default function BookRoomScreen({ route, navigation }) {
               <Text style={S.summaryTxt}>⏳  {duration} hour{duration > 1 ? 's' : ''}</Text>
             </View>
           </View>
-        ) : (
+        ) : null}
+
+        {(!searchData?.hasSearched || isManualEdit) && (
           <>
+            {/* EDIT HEADER */}
+            {isManualEdit && (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.txt }}>Edit Booking</Text>
+                <TouchableOpacity onPress={() => setIsManualEdit(false)}>
+                  <Text style={{ color: Colors.sRed, fontSize: 13, fontWeight: '600' }}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            )}
             {/* DATE RANGE */}
+
             <View style={S.section}>
               <FL text="Select Date Range" />
               <TouchableOpacity style={S.pickField} onPress={() => setShowCalModal(true)}>
@@ -273,6 +288,7 @@ export default function BookRoomScreen({ route, navigation }) {
             </View>
           </>
         )}
+
 
         {/* MEETING TYPE */}
         <View style={S.section}>

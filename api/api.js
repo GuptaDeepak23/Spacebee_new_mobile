@@ -11,6 +11,10 @@ export const verifyOtp = async ({ email, otp }) => {
     return response.data;
 };
 
+export const logout = async () => {
+    const response = await axiosInstance.post('/auth/logout');
+    return response.data;
+}
 export const stats = async () => {
     const response = await axiosInstance.get('/employee/dashboard/stat');
     return response.data;
@@ -48,7 +52,22 @@ export const bookings = async (params) => {
     return response.data;
 }
 
+export const cancelbooking = async (id) => {
+    const response = await axiosInstance.delete(`/bookings/${id}/`)
+    return response.data;
+}
+
 export const allbooking = async (params) => {
     const response = await axiosInstance.get("/bookings/all", { params })
     return response.data;
 }
+
+export const profile = async () => {
+    const response = await axiosInstance.get("/employees/me")
+    return response.data;
+}
+
+export const updateActiveBranch = async (branchId) => {
+    const response = await axiosInstance.put(`/employees/me/active-branch/${branchId}`);
+    return response.data;
+};

@@ -2,6 +2,13 @@ import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import Toast from "react-native-toast-message";
 
+
+let logoutCallback = null;
+
+export const setLogoutCallback = (cb) => {
+    logoutCallback = cb;
+};
+
 const axiosInstance = axios.create({
     baseURL: "http://192.168.1.60:8002/api",
     timeout: 10000,
@@ -10,6 +17,7 @@ const axiosInstance = axios.create({
         Accept: "application/json",
     },
 });
+
 
 
 // ======================
@@ -55,8 +63,10 @@ axiosInstance.interceptors.response.use(
                     text2: "Please login again",
                 });
 
-                // TODO: Navigate to login screen
+                // Trigger global logout
+                if (logoutCallback) logoutCallback();
             }
+
 
             // 🔴 Other API errors
             else {

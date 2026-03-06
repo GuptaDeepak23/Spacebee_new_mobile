@@ -1,4 +1,8 @@
-import { Platform } from 'react-native';
+import { Platform, Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
+export const IS_TABLET = width > 500 && (width / height) > 0.6; // Basic tablet detection
+
 
 export const Colors = {
   primary: '#22BF96',

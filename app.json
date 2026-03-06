@@ -1,9 +1,10 @@
 {
   "expo": {
-    "name": "WorkSpaceRN",
-    "slug": "workspacern",
+    "name": "Spacebee",
+    "slug": "spacebee",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/spacebee.png",
     "splash": {
       "resizeMode": "contain",
       "backgroundColor": "#1A4D8F"
@@ -13,6 +14,7 @@
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/spacebee.png",
         "backgroundColor": "#1A4D8F"
       }
     },

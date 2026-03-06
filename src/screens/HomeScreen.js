@@ -1,11 +1,14 @@
 // src/screens/HomeScreen.js
 import React, { useState, useRef } from 'react';
 import { View, TouchableOpacity, Animated, FlatList, Alert, StyleSheet, Text, ActivityIndicator, RefreshControl } from 'react-native';
-import { Colors, Shadows } from '../theme';
+import { Colors, Shadows, IS_TABLET } from '../theme';
+
 import { SecHd } from '../components/Shared';
 import { ROOMS } from '../data';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useStats, useBranch, useFindAvailableRoom, useMyBookingHome, useExploreRooms } from '../../api/hooks/useApi';
+import { useStats, useBranch, useFindAvailableRoom, useMyBookingHome, useExploreRooms, useUpdateActiveBranch, usecancelbooking } from '../../api/hooks/useApi';
+
+
 
 // ── Home sub-components
 import HeroSection from '../components/home/HeroSection';
@@ -71,7 +74,7 @@ export default function HomeScreen({ navigation }) {
   const [foundRooms, setFoundRooms] = useState([]);
 
   const [hasSearched, setHasSearched] = useState(false);
-  const scrollRef = useRef(null);
+
 
   // ── Date range
   const today = toDateStr(new Date());
@@ -116,13 +119,19 @@ export default function HomeScreen({ navigation }) {
 
 
 
-  const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useStats();
-  const { data: branchData, isLoading: branchLoading, refetch: refetchBranch } = useBranch();
   const { mutate: findRooms, isLoading: roomLoading } = useFindAvailableRoom();
   const { data: myBookingsData, isLoading: bookingsLoading, refetch: refetchBookings } = useMyBookingHome();
   const { data: exploreData, isLoading: exploreLoading, refetch: refetchExplore } = useExploreRooms('available');
+  const { mutate: updateBranch } = useUpdateActiveBranch();
+  const { mutate: cancelBooking } = usecancelbooking();
+  const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useStats();
+  const { data: branchData, isLoading: branchLoading, refetch: refetchBranch } = useBranch();
+
+  const scrollRef = useRef(null);
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const [refreshing, setRefreshing] = useState(false);
+
 
   const onRefresh = async () => {
     console.log('REFRESHING...');
@@ -192,7 +201,29 @@ export default function HomeScreen({ navigation }) {
     });
   };
 
+  const handleCancelBooking = (booking) => {
+    Alert.alert(
+      'Cancel Booking',
+      'Are you sure you want to cancel this booking?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: () => {
+            cancelBooking(booking.id, {
+              onSuccess: () => {
+                onRefresh();
+              }
+            });
+          }
+        },
+      ]
+    );
+  };
+
   // ── Calendar logic ──────────────────────────────────────────
+
   const onDayPress = (day) => {
     if (dateStep === 'from') {
       setFromDate(day.dateString); setToDate(''); setDateStep('to');
@@ -255,10 +286,11 @@ export default function HomeScreen({ navigation }) {
   }
 
   // ── Sliver / collapsing hero ──────────────────────────────
-  const HERO_MAX = 520;
-  const HERO_MIN = 100;
+  const HERO_MAX = IS_TABLET ? 530 : 450;
+  const HERO_MIN = IS_TABLET ? 150 : 100;
   const SCROLL_DIST = HERO_MAX - HERO_MIN;
-  const scrollY = useRef(new Animated.Value(0)).current;
+
+
 
   const heroHeight = scrollY.interpolate({
     inputRange: [0, SCROLL_DIST],
@@ -348,10 +380,13 @@ export default function HomeScreen({ navigation }) {
               keyExtractor={(item, index) => item.id?.toString() || index.toString()}
               ItemSeparatorComponent={() => <View style={{ width: 11 }} />}
               renderItem={({ item }) => (
-                <TouchableOpacity onPress={() => navigation.navigate('BookingDetail', { booking: item })} activeOpacity={0.85}>
-                  <BookingCard booking={item} />
-                </TouchableOpacity>
+                <View style={{ marginBottom: 12 }}>
+                  <TouchableOpacity onPress={() => navigation.navigate('BookingDetail', { booking: item })} activeOpacity={0.85}>
+                    <BookingCard booking={item} onCancel={handleCancelBooking} />
+                  </TouchableOpacity>
+                </View>
               )}
+
               ListEmptyComponent={() => (
                 <View style={{ paddingVertical: 10 }}>
                   <Text style={{ fontSize: 13, color: Colors.txt3 }}>No bookings found.</Text>
@@ -418,9 +453,21 @@ export default function HomeScreen({ navigation }) {
         visible={showBranch}
         branches={branchData || []}
         selected={branch}
-        onSelect={setBranch}
+        onSelect={(b) => {
+          console.log('Branch Selected:', b);
+          setBranch(b);
+          const bId = b?.id || b?._id;
+          if (bId) {
+            console.log('Calling updateBranch with ID:', bId);
+            updateBranch(bId);
+          } else {
+            console.log('No Branch ID found for selection');
+          }
+        }}
+
         onClose={() => setShowBranch(false)}
       />
+
 
       <ParticipantsModal
         visible={showPart}
@@ -437,11 +484,28 @@ export default function HomeScreen({ navigation }) {
 // ─── Styles ───────────────────────────────────────────────────
 const S = StyleSheet.create({
   statsRow: {
-    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between',
-    gap: 8, marginTop: '2%', marginLeft: '2%', marginRight: '2%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: '2%',
+    paddingHorizontal: IS_TABLET ? '10%' : '2%',
+    maxWidth: IS_TABLET ? 1000 : '100%',
+    alignSelf: 'center'
   },
-  statCard: { flex: 1, backgroundColor: '#fff', borderRadius: 15, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: Colors.border },
-  statNum: { fontSize: 22, fontWeight: '700', lineHeight: 24 },
-  statLbl: { fontSize: 9.5, color: Colors.txt2, fontWeight: '500', letterSpacing: 0.3, marginTop: 3, textAlign: 'center' },
-  sec: { paddingHorizontal: 18, marginTop: 22 },
+  statCard: {
+    flex: 1,
+    minWidth: IS_TABLET ? 150 : 80,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    paddingVertical: IS_TABLET ? 20 : 13,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border
+  },
+  statNum: { fontSize: IS_TABLET ? 28 : 22, fontWeight: '700', lineHeight: IS_TABLET ? 32 : 24 },
+
+  statLbl: { fontSize: IS_TABLET ? 12 : 9.5, color: Colors.txt2, fontWeight: '500', letterSpacing: 0.3, marginTop: 3, textAlign: 'center' },
+  sec: { paddingHorizontal: IS_TABLET ? '8%' : 18, marginTop: 22 },
 });
+

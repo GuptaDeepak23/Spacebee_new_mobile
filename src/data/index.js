@@ -123,14 +123,11 @@ export const NOTIFICATIONS = [
 ];
 
 export const PROFILE_MENU = [
-  { id: '1', icon: '👤', color: '#1A4D8F', label: 'Personal Information' },
   { id: '2', icon: '📅', color: '#0AAFA0', label: 'Booking History' },
-  // { id:'3', icon:'🔔', color:'#F59E0B', label:'Notifications Prefs'  },
   { id: '4', icon: '🔒', color: '#7C3AED', label: 'Privacy & Security' },
-  { id: '5', icon: '❓', color: '#10B981', label: 'Help & Support' },
-  { id: '6', icon: '🚪', color: '#EF4444', label: 'Log Out' },
 ];
- 
+
+
 
 
 // ── Helpers ────────────────────────────

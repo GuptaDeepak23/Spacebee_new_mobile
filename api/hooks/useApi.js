@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery, Mutation } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
-import { requestOtp, verifyOtp, stats, getBranch, findavailableroom, mybookinghome, bookroom, explorerooms, bookings, allbooking } from "../api";
+import { requestOtp, verifyOtp, stats, getBranch, findavailableroom, mybookinghome, bookroom, explorerooms, bookings, allbooking, logout, profile, updateActiveBranch , cancelbooking } from "../api";
+
 import { use } from "react";
 
 export const useRequestOtp = () => {
@@ -47,6 +48,29 @@ export const useVerifyOtp = () => {
             console.log("Error verifying OTP", msg);
         }
     });
+}
+
+export const uselogout = () => {
+    return useMutation({
+        mutationFn: logout,
+        onSuccess: (data) => {
+            Toast.show({
+                type: 'success',
+                text1: 'Logged out successfully',
+                text2: data.message,
+            });
+            console.log("Logged out successfully", data);
+        },
+        onError: (error) => {
+            const msg = error.response?.data?.detail;
+            Toast.show({
+                type: 'error',
+                text1: 'Logout Error',
+                text2: msg,
+            });
+            console.log("Error logging out", msg);
+        }
+    })
 }
 
 export const useStats = () => {
@@ -154,3 +178,69 @@ export const useAllBooking = (status, options = {}) => {
         ...options,
     })
 }
+
+export const usecancelbooking = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: cancelbooking,
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['my-bookings', 'stats'] });
+            Toast.show({
+                type: 'success',
+                text1: 'Booking cancelled successfully',
+                text2: data.message,
+            });
+            console.log("Booking cancelled successfully", data);
+        },
+        onError: (error) => {
+            const msg = error.response?.data?.detail;
+            Toast.show({
+                type: 'error',
+                text1: 'Booking Error',
+                text2: msg,
+            });
+            console.log("Error booking room", msg);
+        }
+    })
+}
+
+
+export const useProfile = () => {
+    return useQuery({
+        queryKey: ['profile'],
+        queryFn: profile,
+    })
+}
+
+export const useUpdateActiveBranch = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id) => {
+            console.log('Mutation executing for branch ID:', id);
+            return updateActiveBranch(id);
+        },
+        onSuccess: (data) => {
+            console.log('Branch Update Success:', data);
+            queryClient.invalidateQueries({ queryKey: ['stats'] });
+            queryClient.invalidateQueries({ queryKey: ['explore-rooms'] });
+            queryClient.invalidateQueries({ queryKey: ['my-bookings'] });
+            Toast.show({
+
+                type: 'success',
+                text1: 'Branch updated',
+                text2: data.message || 'Active branch updated successfully',
+            });
+        },
+        onError: (error) => {
+            console.log('Branch Update Error:', error);
+            const msg = error.response?.data?.detail || error.message;
+            Toast.show({
+                type: 'error',
+                text1: 'Update Error',
+                text2: msg,
+            });
+        }
+    });
+}
+
+

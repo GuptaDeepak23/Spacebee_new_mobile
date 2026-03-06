@@ -2,23 +2,25 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { RoomThumb } from '../Shared';
-import { Colors } from '../../theme';
+import { Colors, IS_TABLET } from '../../theme';
+
 
 export default function RoomCard({ room }) {
     const isAvailable = room.is_available === true || room.status === 'available';
     return (
         <View style={S.card}>
             <RoomThumb theme={room.theme} />
-            <View style={{ flex: 1, marginLeft: 11 }}>
-                <Text style={S.name} numberOfLines={1}>{room.name}</Text>
-                <Text style={S.floor} numberOfLines={1}>🏠 {room.floor}</Text>
-                <Text style={{ fontSize: 10.5, color: Colors.txt2 }}>👥 Up to {room.capacity} people</Text>
+            <View style={{ flex: 1, marginLeft: IS_TABLET ? 16 : 11 }}>
+                <Text style={[S.name, IS_TABLET && { fontSize: 16 }]} numberOfLines={1}>{room.name}</Text>
+                <Text style={[S.floor, IS_TABLET && { fontSize: 13 }]} numberOfLines={1}>🏠 {room.floor}</Text>
+                <Text style={{ fontSize: IS_TABLET ? 13 : 10.5, color: Colors.txt2 }}>👥 Up to {room.capacity} people</Text>
             </View>
-            <View style={[S.avail, { backgroundColor: isAvailable ? '#D1FAE5' : '#FEE2E2' }]}>
-                <Text style={{ fontSize: 10.5, fontWeight: '600', color: isAvailable ? Colors.sGreen : Colors.sRed }}>
+            <View style={[S.avail, IS_TABLET && { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 }, { backgroundColor: isAvailable ? '#D1FAE5' : '#FEE2E2' }]}>
+                <Text style={{ fontSize: IS_TABLET ? 13 : 10.5, fontWeight: '600', color: isAvailable ? Colors.sGreen : Colors.sRed }}>
                     {isAvailable ? 'Available' : 'Occupied'}
                 </Text>
             </View>
+
         </View>
     );
 }

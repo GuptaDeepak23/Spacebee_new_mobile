@@ -23,6 +23,8 @@ import BookingDetailScreen from '../screens/BookingDetailScreen';
 import BookRoomScreen from '../screens/BookRoomScreen';
 import ReviewScreen from '../screens/ReviewScreen';
 import SuccessScreen from '../screens/SuccessScreen';
+import PrivacySecurityScreen from '../screens/PrivacySecurityScreen';
+
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -139,6 +141,8 @@ function MainNavigator() {
       <Stack.Screen name="Review" component={ReviewScreen} />
       <Stack.Screen name="Success" component={SuccessScreen} options={{ animation: 'fade' }} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="PrivacySecurity" component={PrivacySecurityScreen} />
+
     </Stack.Navigator>
   );
 }

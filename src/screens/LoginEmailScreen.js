@@ -7,6 +7,7 @@ import {
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRequestOtp } from '../../api/hooks/useApi';
+import { IS_TABLET } from '../theme';
 
 const MINT_GREEN = '#22BF96';
 
@@ -99,19 +100,19 @@ const S = StyleSheet.create({
     logo: { width: 120, height: 120, resizeMode: 'contain', marginBottom: 10 },
     form: { width: '100%' },
     inputContainer: { marginBottom: 24 },
-    label: { fontSize: 11, fontWeight: '700', color: '#1E1B6E', marginBottom: 8, letterSpacing: 1 },
+    label: { fontSize: IS_TABLET ? 16 : 11, fontWeight: '700', color: '#1E1B6E', marginBottom: 8, letterSpacing: 1 },
     input: {
         backgroundColor: '#F5F7FA', borderRadius: 12,
-        padding: 16, fontSize: 16, color: '#1E1B6E',
+        padding: IS_TABLET ? 20 : 16, fontSize: IS_TABLET ? 18 : 16, color: '#1E1B6E',
         borderWidth: 1, borderColor: '#E1E5EB'
     },
     button: {
         backgroundColor: MINT_GREEN, borderRadius: 12,
-        padding: 18, alignItems: 'center', shadowColor: MINT_GREEN,
+        padding: IS_TABLET ? 20 : 18, alignItems: 'center', shadowColor: MINT_GREEN,
         shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3,
         shadowRadius: 8, elevation: 4
     },
-    buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+    buttonText: { color: '#fff', fontSize: IS_TABLET ? 18 : 16, fontWeight: '700' },
     footerText: {
         marginTop: 24, fontSize: 12, color: '#999',
         textAlign: 'center', lineHeight: 18

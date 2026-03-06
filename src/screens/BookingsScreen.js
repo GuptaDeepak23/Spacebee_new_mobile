@@ -8,7 +8,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GradHeader, StatusBadge } from '../components/Shared';
 import { Colors, Shadows, statusStyle, Gradients } from '../theme';
 import { ActivityIndicator, FlatList } from 'react-native';
-import { useBookings, useAllBooking } from '../../api/hooks/useApi';
+import { useBookings, useAllBooking, usecancelbooking } from '../../api/hooks/useApi';
+
 
 
 // ─── Constants ───────────────────────────────────────────────
@@ -60,6 +61,30 @@ export default function BookingsScreen({ navigation }) {
   const hasNextPage = mainTab === 0 ? hasNextMy : hasNextAll;
   const fetchNextPage = mainTab === 0 ? fetchNextMy : fetchNextAll;
   const refetch = mainTab === 0 ? refetchMy : refetchAll;
+
+  const { mutate: cancelBooking } = usecancelbooking();
+
+  const handleCancelBooking = (booking) => {
+    Alert.alert(
+      'Cancel Booking',
+      'Are you sure you want to cancel this booking?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: () => {
+            cancelBooking(booking.id, {
+              onSuccess: () => {
+                refetch();
+              }
+            });
+          }
+        },
+      ]
+    );
+  };
+
 
   const bookings = mainTab === 0
     ? (myBookingsData?.pages.flatMap(page => page.bookings || page.data || []) || [])
@@ -154,8 +179,13 @@ export default function BookingsScreen({ navigation }) {
               activeOpacity={0.85}
               style={{ marginBottom: 12 }}
             >
-              <BookingCard booking={item} isAllBooking={mainTab === 1} />
+              <BookingCard
+                booking={item}
+                isAllBooking={mainTab === 1}
+                onCancel={mainTab === 0 ? handleCancelBooking : null}
+              />
             </TouchableOpacity>
+
           )}
         />
       )}
@@ -164,7 +194,8 @@ export default function BookingsScreen({ navigation }) {
 }
 
 // ─── Booking Card ─────────────────────────────────────────────
-function BookingCard({ booking, isAllBooking }) {
+function BookingCard({ booking, isAllBooking, onCancel }) {
+
   const ss = statusStyle(booking.status.toLowerCase());
   const d = new Date(booking.start_time);
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -206,7 +237,17 @@ function BookingCard({ booking, isAllBooking }) {
         <View style={{ marginTop: 2, alignSelf: 'flex-start' }}>
           <StatusBadge status={booking.status.toLowerCase()} />
         </View>
+        {onCancel && (booking.status?.toLowerCase() === 'upcoming' || booking.status?.toLowerCase() === 'started') && (
+          <TouchableOpacity
+            style={BC.cancelBtn}
+            onPress={() => onCancel(booking)}
+            activeOpacity={0.7}
+          >
+            <Text style={BC.cancelBtnTxt}>Cancel</Text>
+          </TouchableOpacity>
+        )}
       </View>
+
 
       <View style={BC.arrowWrap}>
         <Text style={BC.arrow}>›</Text>
@@ -307,7 +348,23 @@ const BC = StyleSheet.create({
   otherUser: { fontSize: 10.5, color: Colors.purple, fontWeight: '500', marginBottom: 2 },
   arrowWrap: { paddingHorizontal: 14, justifyContent: 'center' },
   arrow: { fontSize: 20, color: Colors.txt3 },
+  cancelBtn: {
+    marginTop: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#FFF1F0',
+    borderWidth: 1,
+    borderColor: '#FFCCC7',
+    alignSelf: 'flex-start',
+  },
+  cancelBtnTxt: {
+    color: '#FF4D4F',
+    fontSize: 11,
+    fontWeight: '700',
+  },
 });
+
 
 const ES = StyleSheet.create({
   wrap: { alignItems: 'center', paddingTop: 70, paddingHorizontal: 32 },

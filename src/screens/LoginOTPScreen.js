@@ -4,6 +4,7 @@ import {
     View, Text, TextInput, TouchableOpacity, StyleSheet,
     KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native';
+import { IS_TABLET } from '../theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useVerifyOtp, useRequestOtp } from '../../api/hooks/useApi';
@@ -157,25 +158,25 @@ const S = StyleSheet.create({
     scroll: { flexGrow: 1, padding: 24 },
     backBtn: { marginBottom: 30 },
     backBtnText: { color: '#1E1B6E', fontSize: 16, fontWeight: '600' },
-    header: { marginBottom: 40 },
-    title: { fontSize: 28, fontWeight: '800', color: '#1E1B6E', marginBottom: 12 },
-    subtitle: { fontSize: 16, color: '#666', lineHeight: 24 },
+    header: { marginBottom: IS_TABLET ? 60 : 40 },
+    title: { fontSize: IS_TABLET ? 32 : 28, fontWeight: '800', color: '#1E1B6E', marginBottom: 12 },
+    subtitle: { fontSize: IS_TABLET ? 18 : 16, color: '#666', lineHeight: 24 },
     emailBold: { fontWeight: '700', color: '#1E1B6E' },
     otpContainer: {
         flexDirection: 'row', justifyContent: 'space-between',
-        marginBottom: 40, gap: 2
+        marginBottom: IS_TABLET ? 60 : 40, gap: 2
     },
     otpInput: {
-        width: 50, height: 60, backgroundColor: '#F5F7FA',
+        width: IS_TABLET ? 60 : 50, height: IS_TABLET ? 70 : 60, backgroundColor: '#F5F7FA',
         borderRadius: 12, borderWidth: 1, borderColor: '#E1E5EB',
-        textAlign: 'center', fontSize: 24, fontWeight: '700', color: '#1E1B6E'
+        textAlign: 'center', fontSize: IS_TABLET ? 28 : 24, fontWeight: '700', color: '#1E1B6E'
     },
     button: {
         backgroundColor: MINT_GREEN, borderRadius: 12,
-        padding: 18, alignItems: 'center'
+        padding: IS_TABLET ? 20 : 18, alignItems: 'center'
     },
-    buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-    resendBtn: { marginTop: 30, alignItems: 'center' },
-    resendText: { color: '#666', fontSize: 14 },
+    buttonText: { color: '#fff', fontSize: IS_TABLET ? 18 : 16, fontWeight: '700' },
+    resendBtn: { marginTop: IS_TABLET ? 40 : 30, alignItems: 'center' },
+    resendText: { color: '#666', fontSize: IS_TABLET ? 18 : 14 },
     resendLink: { color: MINT_GREEN, fontWeight: '700' }
 });
